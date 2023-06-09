@@ -64,13 +64,14 @@ class MessageCounterIndicator extends St.Label {
                 }
             }));
 
-        if (count > 10) {
-            // Limit count
-            count = 10;
+        // Create unicode character based on count
+        if (count <= 10) {
+            label = String.fromCharCode(0x2775 + count);
+        } else if (count <= 20) {
+            label = String.fromCharCode(0x24ea + count - 10);
+        } else {
+            label = String.fromCharCode(0x2295);
         }
-
-        // Create unicode character based on count (➊ .. ➓)
-        label = String.fromCharCode(0x2789 + count);
         this.text = label;
         this.visible = (count > 0);
     }
