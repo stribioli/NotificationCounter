@@ -89,7 +89,7 @@ class MessageCounterIndicator extends St.Label {
 
 
 const DASHTOPANEL_UUID = 'dash-to-panel@jderose9.github.com';
-let extensionChangedHandler;
+let extensionChangedHandler, panelsChangedHandler;
 let extensionSystem = (Main.extensionManager || imports.ui.extensionSystem);
 
 function init() {
@@ -100,10 +100,11 @@ function enable() {
 
     if (global.dashToPanel) {
         _enableSecondaryPanels(global.dashToPanel.panels);
+        _listenToDashToPanel();
     } else {
         extensionChangedHandler = extensionSystem.connect('extension-state-changed', (data, extension) => {
             if (extension.uuid === DASHTOPANEL_UUID && extension.state === 1) {
-                _enableSecondaryPanels(global.dashToPanel.panels);
+                _listenToDashToPanel();
             }
         });
     }
@@ -159,6 +160,14 @@ function _enableSecondaryPanels(panels) {
     });
 }
 
+function _listenToDashToPanel() {
+    if (!panelsChangedHandler) {
+        panelsChangedHandler = global.dashToPanel.connect('panels-created', () => {
+            _enableSecondaryPanels(global.dashToPanel.panels);
+        });
+    }
+}
+
 function disable() {
     _disableSinglePanel(Main.panel);
 
@@ -166,6 +175,11 @@ function disable() {
         global.dashToPanel.panels.slice(1).forEach(p => {
             _disableSinglePanel(p);
         });
+
+        if (panelsChangedHandler) {
+            global.dashToPanel.disconnect(panelsChangedHandler);
+            panelsChangedHandler = null;
+        }
     }
 
     if (extensionChangedHandler) {
