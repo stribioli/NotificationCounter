@@ -88,17 +88,37 @@ class MessageCounterIndicator extends St.Label {
 });
 
 
-let count_indicator, orig_indicator, dateMenu;
+const DASHTOPANEL_UUID = 'dash-to-panel@jderose9.github.com';
+let extensionChangedHandler;
+let extensionSystem = (Main.extensionManager || imports.ui.extensionSystem);
 
 function init() {
 }
 
 function enable() {
-    dateMenu = Main.panel.statusArea.dateMenu;
+    _enableSinglePanel(Main.panel);
+
+    if (global.dashToPanel) {
+        _enableSecondaryPanels(global.dashToPanel.panels);
+    } else {
+        extensionChangedHandler = extensionSystem.connect('extension-state-changed', (data, extension) => {
+            if (extension.uuid === DASHTOPANEL_UUID && extension.state === 1) {
+                _enableSecondaryPanels(global.dashToPanel.panels);
+            }
+        });
+    }
+}
+
+function _enableSinglePanel(panel) {
+    if (panel.statusArea.NotificationCounter && panel.statusArea.NotificationCounter.active) {
+        return;
+    }
+
+    let dateMenu = panel.statusArea.dateMenu;
     let dateMenuLayout = dateMenu.get_children()[0];
     let actors = dateMenuLayout.get_children();
     let orig_pad = actors[0];
-    orig_indicator = dateMenu._indicator;
+    let orig_indicator = dateMenu._indicator;
 
     // Remove original pad
     dateMenuLayout.remove_child(orig_pad);
@@ -108,7 +128,7 @@ function enable() {
     dateMenuLayout.remove_child(orig_indicator);
 
     // Create new indicator
-    count_indicator = new MessageCounterIndicator();
+    let count_indicator = new MessageCounterIndicator();
     dateMenu._indicator = count_indicator;
 
     // Add it with pad and constraint
@@ -123,9 +143,46 @@ function enable() {
     dateMenuLayout.add_child(count_indicator);
     dateMenuLayout.add_child(pad);
     dateMenuLayout.set_child_at_index(pad, 0);
+
+    // Save manipulated objects, in case we need to restore them when disabling this extension.
+    panel.statusArea.NotificationCounter = {
+        active: true,
+        dateMenu: dateMenu,
+        orig_indicator: orig_indicator,
+        count_indicator: count_indicator
+    };
+}
+
+function _enableSecondaryPanels(panels) {
+    panels.slice(1).forEach(p => {
+        _enableSinglePanel(p);
+    });
 }
 
 function disable() {
+    _disableSinglePanel(Main.panel);
+
+    if (global.dashToPanel) {
+        global.dashToPanel.panels.slice(1).forEach(p => {
+            _disableSinglePanel(p);
+        });
+    }
+
+    if (extensionChangedHandler) {
+        extensionSystem.disconnect(extensionChangedHandler);
+        extensionChangedHandler = null;
+    }
+}
+
+function _disableSinglePanel(panel) {
+    if (!panel.statusArea.NotificationCounter || !panel.statusArea.NotificationCounter.active) {
+        return;
+    }
+
+    let dateMenu = panel.statusArea.NotificationCounter.dateMenu;
+    let orig_indicator = panel.statusArea.NotificationCounter.orig_indicator;
+    let count_indicator = panel.statusArea.NotificationCounter.count_indicator;
+
     let dateMenuLayout = dateMenu.get_children()[0];
     let old_pad = dateMenuLayout.get_children()[0];
 
@@ -148,4 +205,8 @@ function disable() {
     }));
     dateMenuLayout.add_child(pad);
     dateMenuLayout.set_child_at_index(pad, 0);
+
+    panel.statusArea.NotificationCounter = {
+        active: false
+    };
 }
