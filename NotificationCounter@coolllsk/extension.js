@@ -104,6 +104,9 @@ function enable() {
     } else {
         extensionChangedHandler = extensionSystem.connect('extension-state-changed', (data, extension) => {
             if (extension.uuid === DASHTOPANEL_UUID && extension.state === 1) {
+                if (global.dashToPanel) {
+                    _enableSecondaryPanels(global.dashToPanel.panels);
+                }
                 _listenToDashToPanel();
             }
         });
