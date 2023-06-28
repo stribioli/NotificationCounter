@@ -181,13 +181,17 @@ function disable() {
         });
 
         if (panelsChangedHandler) {
-            global.dashToPanel.disconnect(panelsChangedHandler);
+            try {
+                global.dashToPanel.disconnect(panelsChangedHandler);
+            } catch (e) {}
             panelsChangedHandler = null;
         }
     }
 
     if (extensionChangedHandler) {
-        extensionSystem.disconnect(extensionChangedHandler);
+        try {
+            extensionSystem.disconnect(extensionChangedHandler);
+        } catch (e) {}
         extensionChangedHandler = null;
     }
 }
